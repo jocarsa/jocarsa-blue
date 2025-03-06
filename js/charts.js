@@ -1,3 +1,4 @@
+
 (function (global) {
   /**
    * Helper to create an SVG element with a given width/height.
@@ -12,12 +13,24 @@
   }
 
   /**
-   * Helper to add a tooltip (via <title>) to an SVG element.
+   * Helper to add a tooltip (via a <title> element) to an SVG element.
    */
   function addTooltip(element, text) {
     const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
     title.textContent = text;
     element.appendChild(title);
+  }
+
+  /**
+   * Helper to extract numeric value and label from a data item.
+   * If the item is an object with a "value" property, returns that value and its label.
+   * Otherwise, returns the item as the value with an empty label.
+   */
+  function extractData(item) {
+    if (typeof item === "object" && item !== null && "value" in item) {
+      return { value: item.value, label: item.label || "" };
+    }
+    return { value: item, label: "" };
   }
 
   /*************************************************************
@@ -31,10 +44,13 @@
     const barSpacing = options.barSpacing || 5;
 
     const svg = createSVG(width, height);
-    const maxValue = Math.max(...data);
+    // Build an array of numeric values
+    const values = data.map(item => extractData(item).value);
+    const maxValue = Math.max(...values);
     const barWidth = (width - (data.length - 1) * barSpacing) / data.length;
 
-    data.forEach((value, i) => {
+    data.forEach((item, i) => {
+      const { value, label } = extractData(item);
       const barHeight = (value / maxValue) * (height - 20);
       const x = i * (barWidth + barSpacing);
       const y = height - barHeight;
@@ -47,7 +63,7 @@
       rect.setAttribute("fill", barColor);
       rect.style.transition = "0.2s";
 
-      addTooltip(rect, `Value: ${value}`);
+      addTooltip(rect, label ? `${label}: ${value}` : `Value: ${value}`);
 
       rect.addEventListener("mouseover", () => {
         rect.setAttribute("fill", hoverColor);
@@ -73,20 +89,19 @@
     const hoverColor = options.hoverColor || "#f0f";
 
     const svg = createSVG(width, height);
-    const maxValue = Math.max(...data);
-    const minValue = Math.min(...data);
+    const extractedData = data.map(item => extractData(item));
+    const values = extractedData.map(item => item.value);
+    const maxValue = Math.max(...values);
+    const minValue = Math.min(...values);
 
     const margin = 20;
     const chartHeight = height - margin * 2;
     const chartWidth = width - margin * 2;
 
-    const points = data.map((val, i) => {
+    const points = extractedData.map((item, i) => {
       const x = margin + (i / (data.length - 1)) * chartWidth;
-      const y =
-        height -
-        margin -
-        ((val - minValue) / (maxValue - minValue)) * chartHeight;
-      return { x, y, val };
+      const y = height - margin - ((item.value - minValue) / (maxValue - minValue)) * chartHeight;
+      return { x, y, val: item.value, label: item.label };
     });
 
     // Create line path
@@ -101,7 +116,7 @@
     path.setAttribute("stroke-width", 2);
     svg.appendChild(path);
 
-    // Create circles
+    // Create circles at each data point
     points.forEach((p) => {
       const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       circle.setAttribute("cx", p.x);
@@ -110,7 +125,7 @@
       circle.setAttribute("fill", pointColor);
       circle.style.transition = "0.2s";
 
-      addTooltip(circle, `Value: ${p.val}`);
+      addTooltip(circle, p.label ? `${p.label}: ${p.val}` : `Value: ${p.val}`);
 
       circle.addEventListener("mouseover", () => {
         circle.setAttribute("fill", hoverColor);
@@ -162,12 +177,13 @@
     const cx = width / 2;
     const cy = height / 2;
     const radius = Math.min(width, height) / 2;
-    const total = data.reduce((acc, val) => acc + val, 0);
+    const extractedData = data.map(item => extractData(item));
+    const total = extractedData.reduce((acc, item) => acc + item.value, 0);
 
     let startAngle = 0;
 
-    data.forEach((val, i) => {
-      const sliceAngle = (val / total) * 360;
+    extractedData.forEach((item, i) => {
+      const sliceAngle = (item.value / total) * 360;
       const endAngle = startAngle + sliceAngle;
 
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -175,7 +191,7 @@
       path.setAttribute("fill", colors[i % colors.length]);
       path.style.transition = "0.2s";
 
-      addTooltip(path, `Value: ${val}`);
+      addTooltip(path, item.label ? `${item.label}: ${item.value}` : `Value: ${item.value}`);
 
       path.addEventListener("mouseover", () => {
         path.style.opacity = 0.8;
@@ -204,12 +220,13 @@
     const cx = width / 2;
     const cy = height / 2;
     const outerRadius = Math.min(width, height) / 2;
-    const total = data.reduce((acc, val) => acc + val, 0);
+    const extractedData = data.map(item => extractData(item));
+    const total = extractedData.reduce((acc, item) => acc + item.value, 0);
 
     let startAngle = 0;
 
-    data.forEach((val, i) => {
-      const sliceAngle = (val / total) * 360;
+    extractedData.forEach((item, i) => {
+      const sliceAngle = (item.value / total) * 360;
       const endAngle = startAngle + sliceAngle;
 
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -220,7 +237,7 @@
       path.setAttribute("fill", colors[i % colors.length]);
       path.style.transition = "0.2s";
 
-      addTooltip(path, `Value: ${val}`);
+      addTooltip(path, item.label ? `${item.label}: ${item.value}` : `Value: ${item.value}`);
 
       path.addEventListener("mouseover", () => {
         path.style.opacity = 0.8;
@@ -240,32 +257,34 @@
    * 5) Stacked Bar Chart (Example)
    *************************************************************/
   function createStackedBarChart(dataSets, options = {}) {
-    // dataSets: e.g. [ [10,20,30], [5,10,15], ... ] => each array is a stack layer
+    // dataSets: e.g. [ [ {value:10, label:"A"}, ... ], [ ... ] ]
     const width = options.width || 300;
     const height = options.height || 200;
-    const colors = options.colors || ["#fff", "#f85C50", "#FFD700", "#00FFB3"];
+    const colors = options.colors || ["#fff", "#F85C50", "#FFD700", "#00FFB3"];
     const svg = createSVG(width, height);
 
-    // We assume all dataSets have the same length
+    // Assume all dataSets have the same length
     const numBars = dataSets[0].length;
     const barSpacing = options.barSpacing || 5;
     const barWidth = (width - (numBars - 1) * barSpacing) / numBars;
 
     // Calculate total per bar
     const totals = Array.from({ length: numBars }, (_, i) =>
-      dataSets.reduce((acc, ds) => acc + ds[i], 0)
+      dataSets.reduce((acc, ds) => {
+        const { value } = extractData(ds[i]);
+        return acc + value;
+      }, 0)
     );
     const maxValue = Math.max(...totals);
 
-    // For each bar, we stack the segments
+    // For each bar, stack the segments
     for (let i = 0; i < numBars; i++) {
       let yOffset = 0;
       const x = i * (barWidth + barSpacing);
 
       dataSets.forEach((layer, layerIndex) => {
-        const val = layer[i];
-        // Height proportion
-        const segmentHeight = (val / maxValue) * (height - 20);
+        const { value, label } = extractData(layer[i]);
+        const segmentHeight = (value / maxValue) * (height - 20);
         const y = height - segmentHeight - yOffset;
 
         const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -276,7 +295,7 @@
         rect.setAttribute("fill", colors[layerIndex % colors.length]);
         rect.style.transition = "0.2s";
 
-        addTooltip(rect, `Value: ${val}`);
+        addTooltip(rect, label ? `${label}: ${value}` : `Value: ${value}`);
 
         rect.addEventListener("mouseover", () => {
           rect.style.opacity = 0.8;
@@ -286,8 +305,6 @@
         });
 
         svg.appendChild(rect);
-
-        // Increase offset for next segment
         yOffset += segmentHeight;
       });
     }
@@ -299,7 +316,6 @@
    * 6) Radial Gauge Chart (Example)
    *************************************************************/
   function createRadialGaugeChart(value, maxValue = 100, options = {}) {
-    // Renders a gauge from 0 to maxValue, partially filling a circle
     const width = options.width || 200;
     const height = options.height || 200;
     const color = options.color || "#00FFB3";
@@ -308,11 +324,15 @@
 
     const cx = width / 2;
     const cy = height / 2;
-    const radius = Math.min(width, height) / 2 - 10; // small padding
-    const startAngle = 135; // gauge start
-    const endAngle = 405;  // gauge end
+    const radius = Math.min(width, height) / 2 - 10;
+    const startAngle = 135;
+    const endAngle = 405;
 
-    // Draw background arc (full range)
+    // Process gauge value in case it is an object.
+    const gaugeData = extractData(value);
+    value = gaugeData.value;
+
+    // Draw background arc
     const bgPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
     bgPath.setAttribute(
       "d",
@@ -333,7 +353,9 @@
     valuePath.setAttribute("fill", color);
     svg.appendChild(valuePath);
 
-    // Add text
+    addTooltip(valuePath, gaugeData.label ? `${gaugeData.label}: ${gaugeData.value}` : `Value: ${gaugeData.value}`);
+
+    // Add text showing value
     const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
     text.setAttribute("x", cx);
     text.setAttribute("y", cy + 5);

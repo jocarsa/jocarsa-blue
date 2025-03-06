@@ -29,19 +29,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8">
   <title>Login - Charts Application</title>
-  <link rel="stylesheet" href="css/estilo.css">
+  <link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
-  <h1>Login</h1>
-  <?php if ($error): ?>
-    <p style="color:red;"><?php echo htmlspecialchars($error); ?></p>
-  <?php endif; ?>
-  <form method="post" action="login.php">
-    <label>Username: <input type="text" name="username" required></label><br>
-    <label>Password: <input type="password" name="password" required></label><br>
-    <input type="submit" value="Login">
-  </form>
-  <p>Don't have an account? <a href="register.php">Register here</a>.</p>
+  <div class="form-container">
+    <h1 class="form-title">Login</h1>
+    <?php if ($error): ?>
+      <p class="error"><?php echo htmlspecialchars($error); ?></p>
+    <?php endif; ?>
+    <form method="post" action="login.php">
+      <div class="form-group">
+        <label>Username:</label>
+        <input type="text" name="username" placeholder="Enter your username" required>
+      </div>
+      <div class="form-group">
+        <label>Password:</label>
+        <input type="password" name="password" placeholder="Enter your password" required>
+      </div>
+      <button type="submit" class="btn">Login</button>
+    </form>
+    <p class="switch">Don't have an account? <a href="register.php">Register here</a>.</p>
+  </div>
 </body>
 </html>
 

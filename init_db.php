@@ -11,13 +11,14 @@ $db->exec("CREATE TABLE IF NOT EXISTS users (
     password TEXT
 )");
 
-// Create charts table
+// Create charts table with the new 'importance' column
 $db->exec("CREATE TABLE IF NOT EXISTS charts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
     chart_name TEXT,
     chart_type TEXT,
     data_url TEXT,
+    importance INTEGER DEFAULT 1,
     FOREIGN KEY(user_id) REFERENCES users(id)
 )");
 
